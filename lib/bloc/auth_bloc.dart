@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 import 'package:simple_flutter_app/res/constants.dart';
 import 'package:simple_flutter_app/res/enums.dart';
 import 'package:simple_flutter_app/res/user_settings.dart';
@@ -10,11 +13,18 @@ part 'auth_event.dart';
 part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final UserCache userSettings;
+  final UserCache userCache;
   SignInType _signInType = SignInType.email;
   SignInType get signInType => _signInType;
+  Timer? _timer;
+  final _inactiveDuration = const Duration(minutes: 5);
+  Duration _remainingTime = const Duration(minutes: 5);
+  final ValueNotifier<Duration> _remainingDuration = ValueNotifier(const Duration());
 
-  AuthBloc(this.userSettings) : super(AuthInitial()) {
+  AuthBloc(this.userCache) : super(AuthInitial()) {
+    // Start the timer when the AuthBloc is initialized
+    _startTimer();
+
     on<AuthEvent>((event, emit) async {
       if (event is SignInAuthEvent) {
         await _signIn(emit, event);
@@ -30,13 +40,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         await _resendEmailVerificationCode(emit, event);
       } else if (event is ChangeLoginModeAuthEvent) {
         await _changeSignInMode(emit);
+      } else if (event is LogoutAuthEvent) {
+        await _logout(emit);
+      } else if (event is UserActivityProgressAuthEvent) {
+        _updateRemainingTime(emit);
+      } else if (event is UserActivityChangeAuthEvent) {
+        _resetTimer();
       }
     });
   }
 
   // Retrieve the login status
   bool isLoggedIn() {
-    return userSettings.isLoggedIn();
+    return userCache.isLoggedIn();
   }
 
   // submit login credentials
@@ -58,7 +74,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final responseBody = response.data;
 
       if (response.statusCode == 200 && responseBody['status'] == '0000') {
-        userSettings.setLoggedIn(true, responseBody['userId']);
+        userCache.setLoggedIn(true, responseBody['userId']);
         // refresh states
         emit(const AuthSignInSuccess('Sign in succesful'));
       } else {
@@ -241,7 +257,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   // logout
-  Future logout(Emitter<AuthState> emit) async {
+  Future _logout(Emitter<AuthState> emit) async {
     emit(const AuthLoading('closing your session'));
 
     Map<String, String> requestBody = {};
@@ -257,6 +273,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final responseBody = response.data;
 
       if (response.statusCode == 200 && responseBody['status'] == '0000') {
+        userCache.setLoggedIn(false, '');
+        _cancelTimer();
         // refresh states
         emit(const AuthLogoutSuccess('Logged out succesfully'));
       } else {
@@ -273,5 +291,44 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future _changeSignInMode(Emitter<AuthState> emit) async {
     _signInType = (_signInType == SignInType.email) ? SignInType.msisdn : SignInType.email;
     emit(AuthSignInModeSwitch(_signInType));
+  }
+
+  @override
+  Future<void> close() {
+    _cancelTimer();
+    return super.close();
+  }
+
+  void _startTimer() {
+    // dont run if not logged in
+    if (!isLoggedIn()) return;
+
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      Utils.log('timer running ${_remainingTime.inSeconds}');
+
+      if (_remainingTime.inSeconds > 0) {
+        _remainingTime = _remainingTime - const Duration(seconds: 5);
+        _remainingDuration.value = _remainingTime;
+
+        if (_remainingTime.inSeconds == 0) {
+          // If the remaining time reaches 0
+          add(LogoutAuthEvent());
+        }
+      }
+    });
+  }
+
+  void _resetTimer() {
+    Utils.log('Reseting timer');
+    _remainingTime = _inactiveDuration;
+    _remainingDuration.value = _remainingTime;
+  }
+  
+  void _updateRemainingTime(Emitter<AuthState> emit) {
+    emit(UserActive(_remainingTime));
+  }
+
+  void _cancelTimer() {
+    _timer?.cancel();
   }
 }

@@ -80,3 +80,7 @@ class ResendCodeAuthEvent extends AuthEvent {
 class LogoutAuthEvent extends AuthEvent {}
 
 class ChangeLoginModeAuthEvent extends AuthEvent {}
+
+class UserActivityProgressAuthEvent extends AuthEvent {}
+
+class UserActivityChangeAuthEvent extends AuthEvent {}

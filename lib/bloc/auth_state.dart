@@ -101,6 +101,12 @@ class AuthLogoutError extends AuthState {
   const AuthLogoutError(this.message);
 }
 
+class UserActive extends AuthState {
+  final Duration timeRemaining;
+
+  const UserActive(this.timeRemaining);
+}
+
 class AuthSignInModeSwitch extends AuthState {
   final SignInType signInType;
 

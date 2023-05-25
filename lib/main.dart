@@ -1,14 +1,13 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_phoenix/flutter_phoenix.dart';
+import 'package:local_session_timeout/local_session_timeout.dart';
 import 'package:simple_flutter_app/bloc/auth_bloc.dart';
 import 'package:simple_flutter_app/bloc/wallet_bloc.dart';
-import 'package:simple_flutter_app/firebase_options.dart';
 import 'package:simple_flutter_app/res/colors.dart';
 import 'package:simple_flutter_app/res/styles.dart';
 import 'package:simple_flutter_app/res/user_settings.dart';
 import 'package:simple_flutter_app/service_locator.dart';
+import 'package:simple_flutter_app/views/commons/dialogs.dart';
 import 'package:simple_flutter_app/views/commons/loading.dart';
 import 'package:simple_flutter_app/views/screens/dashboard.dart';
 import 'package:simple_flutter_app/views/screens/login.dart';
@@ -16,11 +15,8 @@ import 'package:simple_flutter_app/views/screens/login.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await initServices();
-  runApp(Phoenix(
-    child: const MyApp(),
-  ));
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
@@ -34,12 +30,24 @@ class _MyAppState extends State<MyApp> {
   late UserCache _userCache;
   late AuthBloc _authBloc;
   late WalletBloc _walletBloc;
+  final sessionConfig = SessionConfig(
+    invalidateSessionForAppLostFocus: const Duration(seconds: 15),
+    invalidateSessionForUserInactivity: const Duration(seconds: 30),
+  );
 
   @override
   void initState() {
     _userCache = sl();
     _authBloc = AuthBloc(_userCache);
     _walletBloc = WalletBloc(_userCache);
+
+    sessionConfig.stream.listen((SessionTimeoutState timeoutEvent) {
+      if (timeoutEvent == SessionTimeoutState.userInactivityTimeout) {
+        _authBloc.add(UserActivityChangeAuthEvent());
+      } else if (timeoutEvent == SessionTimeoutState.appFocusTimeout) {
+        _authBloc.add(UserActivityChangeAuthEvent());
+      }
+    });
 
     super.initState();
   }
@@ -64,7 +72,11 @@ class _MyAppState extends State<MyApp> {
                 backgroundColor: Colors.grey.shade300,
               ),
               home: BlocConsumer<AuthBloc, AuthState>(
-                listener: (context, state) {},
+                listener: (context, state) async {
+                  if (state is AuthLogoutSuccess) {
+                    Dialogs.showSingleMessageDialog(context, message: state.message);
+                  } else if(state is )
+                },
                 builder: (context, state) {
                   if (!_authBloc.isLoggedIn()) {
                     return const LoginEmailScreen();
@@ -106,7 +118,7 @@ class SplashScreen extends StatelessWidget {
               children: const [
                 Text(
                   'Simple Payment App',
-                  style: AppStyles.textHeadline1,
+                  style: AppStyles.textHeadline2,
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: 30),

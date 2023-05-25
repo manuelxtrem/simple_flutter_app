@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class Utils {
   static bool isEmptyOrNull(dynamic obj) {
@@ -102,6 +103,15 @@ class Utils {
       }
     }
     return 'An error occurred';
+  }
+
+  static String formatMoney(double? money, String? currency,
+      {bool hideCurency = false}) {
+    final currencyFormat = NumberFormat("#,##0.00", "en_US");
+    if (hideCurency) {
+      return currencyFormat.format(money);
+    }
+    return "$currency ${currencyFormat.format(money)}";
   }
 }
 
