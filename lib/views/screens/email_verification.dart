@@ -37,7 +37,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       },
       builder: (context, state) {
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: AppColors.windowBackground,
           body: LoadingOverlay(
             enabled: state is AuthLoading,
             message: (state is AuthLoading) ? state.message : null,

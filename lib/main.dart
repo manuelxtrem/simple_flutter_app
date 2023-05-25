@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:simple_flutter_app/bloc/auth_bloc.dart';
+import 'package:simple_flutter_app/bloc/wallet_bloc.dart';
 import 'package:simple_flutter_app/firebase_options.dart';
 import 'package:simple_flutter_app/res/colors.dart';
 import 'package:simple_flutter_app/res/styles.dart';
 import 'package:simple_flutter_app/res/user_settings.dart';
 import 'package:simple_flutter_app/service_locator.dart';
 import 'package:simple_flutter_app/views/commons/loading.dart';
-import 'package:simple_flutter_app/views/home.dart';
+import 'package:simple_flutter_app/views/screens/dashboard.dart';
 import 'package:simple_flutter_app/views/screens/login.dart';
 
 void main() async {
@@ -30,13 +31,15 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late UserCache _userSettings;
+  late UserCache _userCache;
   late AuthBloc _authBloc;
+  late WalletBloc _walletBloc;
 
   @override
   void initState() {
-    _userSettings = sl();
-    _authBloc = AuthBloc(_userSettings);
+    _userCache = sl();
+    _authBloc = AuthBloc(_userCache);
+    _walletBloc = WalletBloc(_userCache);
 
     super.initState();
   }
@@ -52,6 +55,7 @@ class _MyAppState extends State<MyApp> {
           return MultiBlocProvider(
             providers: [
               BlocProvider<AuthBloc>.value(value: _authBloc),
+              BlocProvider<WalletBloc>.value(value: _walletBloc),
             ],
             child: MaterialApp(
               title: 'Simple Payment App',
@@ -65,7 +69,7 @@ class _MyAppState extends State<MyApp> {
                   if (!_authBloc.isLoggedIn()) {
                     return const LoginEmailScreen();
                   }
-                  return const HomeScreen();
+                  return const DashboardScreen();
                 },
               ),
             ),

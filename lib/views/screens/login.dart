@@ -43,7 +43,7 @@ class _LoginEmailScreenState extends State<LoginEmailScreen> {
       builder: (context, state) {
         Utils.log('state changing $state');
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: AppColors.windowBackground,
           body: LoadingOverlay(
             enabled: state is AuthLoading,
             message: (state is AuthLoading) ? state.message : null,

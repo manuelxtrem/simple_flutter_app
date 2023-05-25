@@ -24,7 +24,7 @@ class BlurredAppBar {
           : null,
       elevation: 0,
       centerTitle: true,
-      backgroundColor: AppColors.background.withOpacity(opacity),
+      backgroundColor: AppColors.windowBackground.withOpacity(opacity),
       leading: IconButton(
           icon: Icon(() {
             switch (leadButtonType) {
